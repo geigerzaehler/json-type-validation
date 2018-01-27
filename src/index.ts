@@ -24,3 +24,5 @@ export {
   fail,
   lazy
 } from './combinators';
+
+import "./example";

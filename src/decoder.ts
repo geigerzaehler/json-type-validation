@@ -91,6 +91,9 @@ const prependAt = (newAt: string, {at, ...rest}: Partial<DecoderError>): Partial
 export class Decoder<A> {
   private constructor(private decode: (json: any) => Result.Result<A, Partial<DecoderError>>) {}
 
+  runWithDefault = (defaultValue: A, json: any): A =>
+    Result.withDefault(defaultValue, this.run(json));
+
   /**
    * Decoder primitive that passes through string values, and fails on all other
    * input.
