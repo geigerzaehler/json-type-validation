@@ -1,4 +1,4 @@
-import { Decoder, object, number, optional, boolean } from "./";
+import { Decoder, object, number, optional, boolean, withDefault, Result } from "./";
 
 interface User {
   id: number;
@@ -10,5 +10,5 @@ const decoder = object({
   isDog: optional(boolean())
 });
 
-const a_user = { id: 1 };
-const user: User = decoder.runWithDefault(a_user, '{ "id": 2, "isDog": true }');
+const a_user: User = { id: 1 };
+const user: User = Result.withException(decoder.run('{ "id": 2, "isDog": true }'));
