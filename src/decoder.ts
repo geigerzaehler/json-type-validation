@@ -246,6 +246,39 @@ export class Decoder<A> {
   }
 
   /**
+   * Decoder for the members of an `enum`.
+   *
+   * ```
+   * enum Direction { North, South, East, West }
+   *
+   * const directionDecoder: Decoder<Direction> = enumMembers(
+   *   Direction.North, Direction.South, Direction.East, Direction.West
+   * );
+   * ```
+   *
+   * Note that TypeScript doesn't have a way to restrict a generic type to only
+   * be an enum, so this decoder can currently take non-enum values. The
+   * intention of this function is to specifically be an enum decoder helper,
+   * so if enum generics are added to TypeScript at some point this decoder's
+   * signature may change.
+   * ```
+   * // don't do this!
+   * const notAnEnumDecoder: Decoder<number> = enumMembers(1, 2, 3);
+   * ```
+   */
+  static enumMembers = <E>(...values: E[]): Decoder<E> =>
+    new Decoder(
+      (json: any) => {
+        for (let i = 0; i < values.length; i++) {
+          if (json === values[i]) {
+            return Result.ok(values[i]);
+          }
+        }
+        return Result.err({message: `expected an enum value, got ${JSON.stringify(json)}`});
+      }
+    );
+
+  /**
    * An higher-order decoder that runs decoders on specified fields of an object,
    * and returns a new object with those fields.
    *

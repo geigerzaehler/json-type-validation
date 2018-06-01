@@ -26,6 +26,9 @@ export function constant(value: any): Decoder<any> {
   return Decoder.constant(value);
 }
 
+/** See `Decoder.enumMembers` */
+export const enumMembers: <E>(...values: E[]) => Decoder<E> = Decoder.enumMembers;
+
 /** See `Decoder.object` */
 export function object<A>(decoders: DecoderObject<A>): Decoder<A> {
   return Decoder.object(decoders);
