@@ -8,7 +8,7 @@ const isEqual = require('lodash/isEqual'); // this syntax avoids TS1192
  */
 export interface DecoderError {
   kind: 'DecoderError';
-  input: any;
+  input: unknown;
   at: string;
   message: string;
 }
@@ -52,12 +52,12 @@ export const decoderErrorString = (error: DecoderError): string =>
 /*
  * Helpers
  */
-const isJsonArray = (json: any): boolean => json instanceof Array;
+const isJsonArray = (json: any): json is unknown[] => json instanceof Array;
 
-const isJsonObject = (json: any): boolean =>
+const isJsonObject = (json: any): json is {[k: string]: unknown} =>
   typeof json === 'object' && json !== null && !isJsonArray(json);
 
-const typeString = (json: any): string => {
+const typeString = (json: unknown): string => {
   switch (typeof json) {
     case 'string':
       return 'a string';
@@ -80,7 +80,8 @@ const typeString = (json: any): string => {
   }
 };
 
-const expectedGot = (expected: string, got: any) => `expected ${expected}, got ${typeString(got)}`;
+const expectedGot = (expected: string, got: unknown) =>
+  `expected ${expected}, got ${typeString(got)}`;
 
 const printPath = (paths: (string | number)[]): string =>
   paths.map(path => (typeof path === 'string' ? `.${path}` : `[${path}]`)).join('');
@@ -126,14 +127,14 @@ export class Decoder<A> {
    * `andThen` and `map` should be enough to build specialized decoders as
    * needed.
    */
-  private constructor(private decode: (json: any) => Result.Result<A, Partial<DecoderError>>) {}
+  private constructor(private decode: (json: unknown) => Result.Result<A, Partial<DecoderError>>) {}
 
   /**
    * Decoder primitive that validates strings, and fails on all other input.
    */
   static string(): Decoder<string> {
     return new Decoder<string>(
-      (json: any) =>
+      (json: unknown) =>
         typeof json === 'string'
           ? Result.ok(json)
           : Result.err({message: expectedGot('a string', json)})
@@ -145,7 +146,7 @@ export class Decoder<A> {
    */
   static number(): Decoder<number> {
     return new Decoder<number>(
-      (json: any) =>
+      (json: unknown) =>
         typeof json === 'number'
           ? Result.ok(json)
           : Result.err({message: expectedGot('a number', json)})
@@ -157,7 +158,7 @@ export class Decoder<A> {
    */
   static boolean(): Decoder<boolean> {
     return new Decoder<boolean>(
-      (json: any) =>
+      (json: unknown) =>
         typeof json === 'boolean'
           ? Result.ok(json)
           : Result.err({message: expectedGot('a boolean', json)})
@@ -165,16 +166,21 @@ export class Decoder<A> {
   }
 
   /**
-   * Decoder identity function. Useful for incremental decoding.
+   * Escape hatch to bypass validation. Always succeeds and types the result as
+   * `any`. Useful for defining decoders incrementally, particularly for
+   * complex objects.
    *
    * Example:
    * ```
-   * const json: any = [1, true, 2, 3, 'five', 4, []];
-   * const jsonArray: any[] = Result.withDefault([], array(anyJson()).run(json));
-   * const numbers: number[] = Result.successes(jsonArray.map(number().run));
+   * interface User {
+   *   name: string;
+   *   complexUserData: ComplexType;
+   * }
    *
-   * numbers
-   * // => [1, 2, 3, 4]
+   * const userDecoder: Decoder<User> = object({
+   *   name: string(),
+   *   complexUserData: anyJson()
+   * });
    * ```
    */
   static anyJson = (): Decoder<any> => new Decoder<any>((json: any) => Result.ok(json));
@@ -252,7 +258,7 @@ export class Decoder<A> {
   static constant<A>(value: A): Decoder<A>;
   static constant(value: any): Decoder<any> {
     return new Decoder(
-      (json: any) =>
+      (json: unknown) =>
         isEqual(json, value)
           ? Result.ok(value)
           : Result.err({message: `expected ${JSON.stringify(value)}, got ${JSON.stringify(json)}`})
@@ -275,9 +281,9 @@ export class Decoder<A> {
    * ```
    */
   static object<A>(decoders: DecoderObject<A>): Decoder<A> {
-    return new Decoder<A>((json: any) => {
+    return new Decoder<A>((json: unknown) => {
       if (isJsonObject(json)) {
-        let obj: any = {};
+        let obj: {[k: string]: unknown} = {};
         for (const key in decoders) {
           if (decoders.hasOwnProperty(key)) {
             const r = decoders[key].decode(json[key]);
@@ -293,7 +299,7 @@ export class Decoder<A> {
             }
           }
         }
-        return Result.ok(obj);
+        return Result.ok(obj as A);
       } else {
         return Result.err({message: expectedGot('an object', json)});
       }
@@ -382,7 +388,7 @@ export class Decoder<A> {
    */
   static optional = <A>(decoder: Decoder<A>): Decoder<undefined | A> =>
     new Decoder<undefined | A>(
-      (json: any) => (json === undefined ? Result.ok(undefined) : decoder.decode(json))
+      (json: unknown) => (json === undefined ? Result.ok(undefined) : decoder.decode(json))
     );
 
   /**
@@ -400,7 +406,7 @@ export class Decoder<A> {
    * ```
    */
   static oneOf = <A>(...decoders: Decoder<A>[]): Decoder<A> =>
-    new Decoder<A>((json: any) => {
+    new Decoder<A>((json: unknown) => {
       const errors: Partial<DecoderError>[] = [];
       for (let i: number = 0; i < decoders.length; i++) {
         const r = decoders[i].decode(json);
@@ -450,7 +456,7 @@ export class Decoder<A> {
    * default value.
    */
   static withDefault = <A>(defaultValue: A, decoder: Decoder<A>): Decoder<A> =>
-    new Decoder<A>((json: any) =>
+    new Decoder<A>((json: unknown) =>
       Result.ok(Result.withDefault(defaultValue, decoder.decode(json)))
     );
 
@@ -488,7 +494,7 @@ export class Decoder<A> {
    * ```
    */
   static valueAt = <A>(paths: (string | number)[], decoder: Decoder<A>): Decoder<A> =>
-    new Decoder<A>((json: any) => {
+    new Decoder<A>((json: unknown) => {
       let jsonAtPath: any = json;
       for (let i: number = 0; i < paths.length; i++) {
         if (jsonAtPath === undefined) {
@@ -523,13 +529,13 @@ export class Decoder<A> {
    * Decoder that ignores the input json and always succeeds with `fixedValue`.
    */
   static succeed = <A>(fixedValue: A): Decoder<A> =>
-    new Decoder<A>((json: any) => Result.ok(fixedValue));
+    new Decoder<A>((json: unknown) => Result.ok(fixedValue));
 
   /**
    * Decoder that ignores the input json and always fails with `errorMessage`.
    */
   static fail = <A>(errorMessage: string): Decoder<A> =>
-    new Decoder<A>((json: any) => Result.err({message: errorMessage}));
+    new Decoder<A>((json: unknown) => Result.err({message: errorMessage}));
 
   /**
    * Decoder that allows for validating recursive data structures. Unlike with
@@ -552,7 +558,7 @@ export class Decoder<A> {
    * ```
    */
   static lazy = <A>(mkDecoder: () => Decoder<A>): Decoder<A> =>
-    new Decoder((json: any) => mkDecoder().decode(json));
+    new Decoder((json: unknown) => mkDecoder().decode(json));
 
   /**
    * Run the decoder and return a `Result` with either the decoded value or a
@@ -577,7 +583,7 @@ export class Decoder<A> {
    * // }
    * ```
    */
-  run = (json: any): Result.Result<A, DecoderError> =>
+  run = (json: unknown): Result.Result<A, DecoderError> =>
     Result.mapError(
       error => ({
         kind: 'DecoderError' as 'DecoderError',
@@ -591,13 +597,13 @@ export class Decoder<A> {
   /**
    * Run the decoder as a `Promise`.
    */
-  runPromise = (json: any): Promise<A> => Result.asPromise(this.run(json));
+  runPromise = (json: unknown): Promise<A> => Result.asPromise(this.run(json));
 
   /**
    * Run the decoder and return the value on success, or throw an exception
    * with a formatted error string.
    */
-  runWithException = (json: any): A =>
+  runWithException = (json: unknown): A =>
     Result.withException(Result.mapError(decoderErrorString, this.run(json)));
 
   /**
@@ -612,7 +618,7 @@ export class Decoder<A> {
    * ```
    */
   map = <B>(f: (value: A) => B): Decoder<B> =>
-    new Decoder<B>((json: any) => Result.map(f, this.decode(json)));
+    new Decoder<B>((json: unknown) => Result.map(f, this.decode(json)));
 
   /**
    * Chain together a sequence of decoders. The first decoder will run, and
@@ -651,7 +657,7 @@ export class Decoder<A> {
    * ```
    */
   andThen = <B>(f: (value: A) => Decoder<B>): Decoder<B> =>
-    new Decoder<B>((json: any) =>
+    new Decoder<B>((json: unknown) =>
       Result.andThen(value => f(value).decode(json), this.decode(json))
     );
 }
