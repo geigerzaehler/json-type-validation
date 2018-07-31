@@ -18,6 +18,9 @@ export function boolean(): Decoder<boolean> {
 /** See `Decoder.anyJson` */
 export const anyJson: () => Decoder<any> = Decoder.anyJson;
 
+/** See `Decoder.unknownJson` */
+export const unknownJson: () => Decoder<unknown> = Decoder.unknownJson;
+
 /** See `Decoder.constant` */
 export function constant(value: true): Decoder<true>;
 export function constant(value: false): Decoder<false>;
