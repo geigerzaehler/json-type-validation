@@ -47,6 +47,7 @@ Alternatively, the main decoder `run()` method returns an object of type `Result
 * [string](_decoder_.decoder.md#string)
 * [succeed](_decoder_.decoder.md#succeed)
 * [union](_decoder_.decoder.md#union)
+* [unknownJson](_decoder_.decoder.md#unknownjson)
 * [valueAt](_decoder_.decoder.md#valueat)
 * [withDefault](_decoder_.decoder.md#withdefault)
 
@@ -83,13 +84,13 @@ ___
 **● decode**: *`function`*
 
 #### Type declaration
-▸(json: *`any`*): `Result.Result`<`A`, `Partial`<[DecoderError](../interfaces/_decoder_.decodererror.md)>>
+▸(json: *`unknown`*): `Result.Result`<`A`, `Partial`<[DecoderError](../interfaces/_decoder_.decodererror.md)>>
 
 **Parameters:**
 
 | Param | Type |
 | ------ | ------ |
-| json | `any` |
+| json | `unknown` |
 
 **Returns:** `Result.Result`<`A`, `Partial`<[DecoderError](../interfaces/_decoder_.decodererror.md)>>
 
@@ -178,7 +179,7 @@ ___
 
 ###  run
 
-▸ **run**(json: *`any`*): `Result.Result`<`A`, [DecoderError](../interfaces/_decoder_.decodererror.md)>
+▸ **run**(json: *`unknown`*): `Result.Result`<`A`, [DecoderError](../interfaces/_decoder_.decodererror.md)>
 
 Run the decoder and return a `Result` with either the decoded value or a `DecoderError` containing the json input, the location of the error, and the error message.
 
@@ -205,7 +206,7 @@ string().run(9001)
 
 | Param | Type |
 | ------ | ------ |
-| json | `any` |
+| json | `unknown` |
 
 **Returns:** `Result.Result`<`A`, [DecoderError](../interfaces/_decoder_.decodererror.md)>
 
@@ -214,7 +215,7 @@ ___
 
 ###  runPromise
 
-▸ **runPromise**(json: *`any`*): `Promise`<`A`>
+▸ **runPromise**(json: *`unknown`*): `Promise`<`A`>
 
 Run the decoder as a `Promise`.
 
@@ -222,7 +223,7 @@ Run the decoder as a `Promise`.
 
 | Param | Type |
 | ------ | ------ |
-| json | `any` |
+| json | `unknown` |
 
 **Returns:** `Promise`<`A`>
 
@@ -231,7 +232,7 @@ ___
 
 ###  runWithException
 
-▸ **runWithException**(json: *`any`*): `A`
+▸ **runWithException**(json: *`unknown`*): `A`
 
 Run the decoder and return the value on success, or throw an exception with a formatted error string.
 
@@ -239,7 +240,7 @@ Run the decoder and return the value on success, or throw an exception with a fo
 
 | Param | Type |
 | ------ | ------ |
-| json | `any` |
+| json | `unknown` |
 
 **Returns:** `A`
 
@@ -250,17 +251,20 @@ ___
 
 ▸ **anyJson**(): [Decoder](_decoder_.decoder.md)<`any`>
 
-Decoder identity function. Useful for incremental decoding.
+Escape hatch to bypass validation. Always succeeds and types the result as `any`. Useful for defining decoders incrementally, particularly for complex objects.
 
 Example:
 
 ```
-const json: any = [1, true, 2, 3, 'five', 4, []];
-const jsonArray: any[] = Result.withDefault([], array(anyJson()).run(json));
-const numbers: number[] = Result.successes(jsonArray.map(number().run));
+interface User {
+  name: string;
+  complexUserData: ComplexType;
+}
 
-numbers
-// => [1, 2, 3, 4]
+const userDecoder: Decoder<User> = object({
+  name: string(),
+  complexUserData: anyJson()
+});
 ```
 
 **Returns:** [Decoder](_decoder_.decoder.md)<`any`>
@@ -790,6 +794,17 @@ const oneOfDecoder: Decoder<C> = oneOf(object<C>({a: string()}), object<C>({b: n
 | hd | [Decoder](_decoder_.decoder.md)<`H`> |
 
 **Returns:** [Decoder](_decoder_.decoder.md)< `A` &#124; `B` &#124; `C` &#124; `D` &#124; `E` &#124; `F` &#124; `G` &#124; `H`>
+
+___
+<a id="unknownjson"></a>
+
+### `<Static>` unknownJson
+
+▸ **unknownJson**(): [Decoder](_decoder_.decoder.md)<`unknown`>
+
+Decoder identity function which always succeeds and types the result as `unknown`.
+
+**Returns:** [Decoder](_decoder_.decoder.md)<`unknown`>
 
 ___
 <a id="valueat"></a>

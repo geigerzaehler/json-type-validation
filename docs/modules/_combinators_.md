@@ -14,6 +14,7 @@
 * [oneOf](_combinators_.md#oneof)
 * [optional](_combinators_.md#optional)
 * [succeed](_combinators_.md#succeed)
+* [unknownJson](_combinators_.md#unknownjson)
 * [valueAt](_combinators_.md#valueat)
 * [withDefault](_combinators_.md#withdefault)
 
@@ -203,6 +204,20 @@ See `Decoder.succeed`
 | fixedValue | `A` |
 
 **Returns:** [Decoder](../classes/_decoder_.decoder.md)<`A`>
+
+___
+<a id="unknownjson"></a>
+
+### `<Const>` unknownJson
+
+**● unknownJson**: *`function`* =  Decoder.unknownJson
+
+See `Decoder.unknownJson`
+
+#### Type declaration
+▸(): [Decoder](../classes/_decoder_.decoder.md)<`unknown`>
+
+**Returns:** [Decoder](../classes/_decoder_.decoder.md)<`unknown`>
 
 ___
 <a id="valueat"></a>
